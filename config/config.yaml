@@ -1,0 +1,14 @@
+collector:
+  endpoint: "wss://gateway.saxo"
+  symbols:
+    - "EURUSD"
+storage:
+  database: "data/forex.db"
+aggregator:
+  intervals: [60, 300, 900]
+strategy:
+  rsi_period: 14
+backtest:
+  start: "2025-01-01T00:00:00"
+executor:
+  slippage: 0.0001

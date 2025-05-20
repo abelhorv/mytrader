@@ -1,0 +1,5 @@
+typer
+pydantic
+PyYAML
+pytest
+numpy
