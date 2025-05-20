@@ -1,4 +1,4 @@
-# Forex Trading Bot
+# Forex Trading Bot mytrader
 
 ## High-Level Architecture
 
