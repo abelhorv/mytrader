@@ -6,6 +6,7 @@ from storage.store import get_store
 from aggregator.candle_builder import MultiIntervalCandleBuilder
 from strategy.strategies import ParametrizedStrategy
 from backtest.replay import run_backtest
+from backtest.trading_logic_test import backtest as run_legacy
 
 app = typer.Typer()
 
@@ -31,7 +32,7 @@ def collect():
 
 @app.command()
 def backtest():
-    run_backtest()
+    run_legacy()
 
 if __name__ == "__main__":
     app()
