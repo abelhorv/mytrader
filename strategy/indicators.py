@@ -4,6 +4,20 @@ from numba import njit
 from scipy.signal import argrelextrema
 from concurrent.futures import ThreadPoolExecutor
 
+from config.loader import load_config
+
+# Load strategy parameters from config as module‐level constants
+_CFG = load_config().strategy
+RSI_PERIOD       = _CFG.rsi_period
+SMA_PERIOD       = _CFG.sma_period
+TREND_WINDOW     = _CFG.trend_window
+MACD_FAST        = _CFG.macd_fast
+MACD_SLOW        = _CFG.macd_slow
+MACD_SIGNAL      = _CFG.macd_signal
+BOLLINGER_PERIOD = _CFG.bollinger_period
+BOLLINGER_STD_DEV= _CFG.bollinger_std_dev
+
+
 # Numba-accelerated primitives
 @njit
 def fast_rsi(prices, period):
@@ -39,24 +53,24 @@ def fast_ema(data, span):
 
 @njit
 def fast_macd(prices):
-    if len(prices) < MACD_SLOW + MACD_SIGNAL:
-        return 0.0, 0.0
-    ema_fast = fast_ema(prices, MACD_FAST)
-    ema_slow = fast_ema(prices, MACD_SLOW)
-    macd_line = ema_fast - ema_slow
-    signal_line = fast_ema(macd_line, MACD_SIGNAL)
-    return macd_line[-1], signal_line[-1]
-
+     if len(prices) < MACD_SLOW + MACD_SIGNAL:
+         return 0.0, 0.0
+     ema_fast   = fast_ema(prices, MACD_FAST)
+     ema_slow   = fast_ema(prices, MACD_SLOW)
+     macd_line  = ema_fast - ema_slow
+     signal_line= fast_ema(macd_line, MACD_SIGNAL)
+     return macd_line[-1], signal_line[-1]
+ 
 @njit
 def fast_bollinger(prices):
     if len(prices) < BOLLINGER_PERIOD:
         return 0
     window = prices[-BOLLINGER_PERIOD:]
-    sma = np.mean(window)
-    std = np.std(window)
-    upper = sma + BOLLINGER_STD_DEV * std
-    lower = sma - BOLLINGER_STD_DEV * std
-    current = prices[-1]
+    sma    = np.mean(window)
+    std    = np.std(window)
+    upper  = sma + BOLLINGER_STD_DEV * std
+    lower  = sma - BOLLINGER_STD_DEV * std
+    current= prices[-1]
     return 1 if current < lower else -1 if current > upper else 0
 
 def detect_double_bottom(prices, order=5, tolerance=0.002):

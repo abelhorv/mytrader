@@ -40,15 +40,23 @@ class StrategyConfig(BaseModel):
     macd_signal:       int
     bollinger_period:  int
     bollinger_std_dev: float
+
     cooldown_seconds:  int
     min_trade_gap:     float
     hysteresis_margin: float
     macd_tolerance:    float
+    min_profit_pips:   float
+    min_hold_seconds:  int
+
     weights:           Weights
     thresholds:        Thresholds
 
+
 class BacktestConfig(BaseModel):
     start: str
+    end:   Optional[str] = None
+#    min_profit_pips: float
+#    min_hold_seconds: int
 
 class ExecutorConfig(BaseModel):
     slippage: float
