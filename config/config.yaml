@@ -50,8 +50,8 @@ strategy:
     slope_sell: -0.0000015
 
 backtest:
-  start: "2025-01-01T00:00:00"
- # optional end: "2025-05-20T23:59:59"
+  start: "2025-05-20T07:00:00"
+  end:   "2025-05-20T16:15:59"
 
 executor:
   slippage: 0.0001

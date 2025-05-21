@@ -101,46 +101,113 @@ def detect_double_top(prices, order=5, tolerance=0.002):
             return -0.5
     return 0
 
+
 def detect_candle_pattern(candle):
-    open_ = float(candle['open'])
-    close = float(candle['close'])
-    high = float(candle['high'])
-    low = float(candle['low'])
+    """
+    Detects simple single-candle patterns and returns a score:
+      +0.5 Doji
+      +0.4 Hammer
+      -0.4 Shooting Star
+      +0.6 “Engulfing-style” bullish
+      -0.6 “Engulfing-style” bearish
+      0    None / neutral
+    """
+    o = float(candle['open'])
+    c = float(candle['close'])
+    h = float(candle['high'])
+    l = float(candle['low'])
 
-    body = abs(close - open_)
-    range_ = high - low
-    if range_ == 0:
+    body = abs(c - o)
+    total_range = h - l
+    if total_range == 0:
         return 0
-    body_ratio = body / range_
-    upper_wick = high - max(open_, close)
-    lower_wick = min(open_, close) - low
 
-    if body_ratio < 0.1:
-        return 0.5  # doji
-    if close > open_ and lower_wick > body * 1.5 and upper_wick < body:
-        return 0.4  # hammer
-    if close < open_ and upper_wick > body * 1.5 and lower_wick < body:
-        return -0.4  # shooting star
-    if close > open_ and open_ < low + 0.3 * range_ and close > open_ + body:
-        return 0.6  # bullish engulfing
-    if close < open_ and open_ > high - 0.3 * range_ and close < open_ - body:
-        return -0.6  # bearish engulfing
-    return 0
-    body_ratio = body / range_
-    upper_wick = candle['high'] - max(candle['open'], candle['close'])
-    lower_wick = min(candle['open'], candle['close']) - candle['low']
+    body_ratio = body / total_range
+    upper_wick = h - max(o, c)
+    lower_wick = min(o, c) - l
 
+    # Doji: very small body
     if body_ratio < 0.1:
-        return 0.5  # doji
-    if candle['close'] > candle['open'] and lower_wick > body * 1.5 and upper_wick < body:
-        return 0.4  # hammer
-    if candle['close'] < candle['open'] and upper_wick > body * 1.5 and lower_wick < body:
-        return -0.4  # shooting star
-    if candle['close'] > candle['open'] and candle['open'] < candle['low'] + 0.3 * range_ and candle['close'] > candle['open'] + body:
-        return 0.6  # bullish engulfing
-    if candle['close'] < candle['open'] and candle['open'] > candle['high'] - 0.3 * range_ and candle['close'] < candle['open'] - body:
-        return -0.6  # bearish engulfing
+        return 0.5
+    # Hammer: green, long lower wick
+    if c > o and lower_wick > body * 1.5 and upper_wick < body:
+        return 0.4
+    # Shooting Star: red, long upper wick
+    if c < o and upper_wick > body * 1.5 and lower_wick < body:
+        return -0.4
+    # “Engulfing-style” bullish: green, opens low in range, closes strongly above
+    if c > o and o < l + 0.3 * total_range and c > o + body:
+        return 0.6
+    # “Engulfing-style” bearish: red, opens high in range, closes strongly below
+    if c < o and o > h - 0.3 * total_range and c < o - body:
+        return -0.6
+
     return 0
+
+
+def detect_multi_candle_pattern(prev, curr):
+    """
+    True (2-candle) Engulfing:
+      +0.6  Bullish engulfing  (current body fully engulfs prior body, and is bullish)
+      -0.6  Bearish engulfing  (current body fully engulfs prior body, and is bearish)
+      0     otherwise
+    """
+    o0, c0 = float(prev['open']),  float(prev['close'])
+    o1, c1 = float(curr['open']),  float(curr['close'])
+    body0 = abs(c0 - o0)
+    body1 = abs(c1 - o1)
+    # current must have bigger body than prior
+    if body1 <= body0:
+        return 0
+    # bullish engulfing: current green, prior red, and current engulfs prior
+    if c1 > o1 and c0 < o0 and o1 < c0 and c1 > o0:
+        return 0.6
+    # bearish engulfing: current red, prior green, and current engulfs prior
+    if c1 < o1 and c0 > o0 and o1 > c0 and c1 < o0:
+        return -0.6
+    return 0
+
+def detect_five_candle_pattern(candles):
+    """
+    Five-bar continuation ("Three Methods"):
+      +0.9  Rising Three Methods (bullish)
+      -0.9  Falling Three Methods (bearish)
+      0     otherwise
+    Expects `candles` as a list of 5 dicts (oldest first).
+    """
+    # unpack prices
+    o = [float(c['open'])  for c in candles]
+    c = [float(c['close']) for c in candles]
+    h = [float(c['high'])  for c in candles]
+    l = [float(c['low'])   for c in candles]
+
+    def inside(i):
+        return h[i] < h[0] and l[i] > l[0]
+
+    # Rising Three Methods
+    if (
+        c[0] > o[0] and                         # bar0 bullish
+        all(c[i] <= o[i] for i in (1,2,3)) and  # bars1–3 bearish/flat
+        all(inside(i)     for i in (1,2,3)) and # inside bar0's range
+        c[4] > o[4] and                         # bar4 bullish
+        c[4] > h[0]                             # closes above bar0.high
+    ):
+        return 0.9
+
+    # Falling Three Methods
+    if (
+        c[0] < o[0] and
+        all(c[i] >= o[i] for i in (1,2,3)) and
+        all(inside(i)     for i in (1,2,3)) and
+        c[4] < o[4] and
+        c[4] < l[0]
+    ):
+        return -0.9
+
+    return 0
+
+
+
 
 
 def evaluate_indicators(
