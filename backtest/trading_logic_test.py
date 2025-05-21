@@ -66,6 +66,7 @@ def backtest():
         c5m_buf   = [c for c in candles_5m  if c["time"]  <= now]
         c15m_buf  = [c for c in candles_15m if c["time"] <= now]
 
+
         vals   = evaluate_indicators(
             price_buf,
             candles_1m  = c1m_buf,
@@ -73,10 +74,14 @@ def backtest():
             candles_15m = c15m_buf,
             cfg         = strat_cfg
         )
+
         action = strategy.generate_signal(
-            history = c1m_buf,
-            tick    = {"timestamp": now, "bid": price, "ask": price, "volume": vol_buf[-1]}
+            history_1m   = c1m_buf,
+            tick         = { 'timestamp': now, 'bid': price, 'ask': price, 'volume': vol_buf[-1] },
+            candles_5m   = c5m_buf,
+            candles_15m  = c15m_buf,
         )
+
 
         # OPEN
         if position is None and action in ["Buy","Sell"]:

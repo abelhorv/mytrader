@@ -12,18 +12,26 @@ class ParametrizedStrategy(BaseStrategy):
         self.last_trade_time = None
         self.last_price = None
 
-    def generate_signal(self, history, tick):
-        prices = [c['close'] for c in history]
-        now = tick['timestamp']  # assume datetime
+    def generate_signal(self,
+                        history_1m,
+                        tick,
+                        candles_5m=None,
+                        candles_15m=None):
+        prices = [c['close'] for c in history_1m]
+        now = tick['timestamp']  
         # Cooldown
         if self.last_trade_time and (now - self.last_trade_time).seconds < self.cfg.cooldown_seconds:
             return "Hold"
 
         vals = evaluate_indicators(
             prices,
-            candles_1m=history,  # adapt as needed
+            candles_1m=history_1m,
+            candles_5m=candles_5m,
+            candles_15m=candles_15m,
             cfg=self.cfg,
         )
+
+
         rsi, slope, macd, macd_signal, boll, pattern, c1, c5, c15 = vals
         price = prices[-1]
         sma = np.mean(prices[-self.cfg.sma_period:])
