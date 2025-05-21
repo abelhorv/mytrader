@@ -45,7 +45,7 @@ class ParametrizedStrategy(BaseStrategy):
         macd_diff   =  macd - macd_signal
         macd_score  =  1 if macd_diff > self.cfg.macd_tolerance else -1 if macd_diff < -self.cfg.macd_tolerance else 0
 
-        total = (
+        total_score = (
             rsi_score   * weights.rsi +
             trend_score * weights.trend +
             sma_score   * weights.sma +
@@ -61,14 +61,16 @@ class ParametrizedStrategy(BaseStrategy):
         if self.last_price and abs(price - self.last_price) < self.cfg.min_trade_gap:
             return "Hold"
 
+#        print(f"{now} scores: rsi={rsi:.1f}, slope={slope:.7f}, macd_diff={(macd-macd_signal):.6f}, boll={boll}, "
+#              f"pattern={pattern:.1f}, c1={c1:.2f}, c5={c5:.2f}, c15={c15:.2f}, total_score={total_score:.2f}")
         # Decision
-        if total > 0.5 + self.cfg.hysteresis_margin:
+        if total_score > 0.5 + self.cfg.hysteresis_margin:
             action = "Buy"
-        elif total < -0.5 - self.cfg.hysteresis_margin:
+        elif total_score < -0.5 - self.cfg.hysteresis_margin:
             action = "Sell"
         else:
             action = "Hold"
-
+#        print(f"{now} total_score={total_score:.2f} → action={action}")
         if action in ("Buy", "Sell"):
             self.last_trade_time = now
             self.last_price = price
