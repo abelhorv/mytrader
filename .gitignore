@@ -3,6 +3,14 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Environment files
+.env
+config/*.secret.yml
+
+# OS or editor temp files
+*.swp
+Thumbs.db
+
 # SQLite database file
 data/forex.db
 
