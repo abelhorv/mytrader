@@ -11,8 +11,8 @@ DB_CFG    = settings.storage.db_config
 strat_cfg = settings.strategy
 
 # === Trade Control Parameters ===
-MIN_PROFIT_PIPS  = 0.0001
-MIN_HOLD_SECONDS = 120
+MIN_PROFIT_PIPS  = strat_cfg.min_profit_pips
+MIN_HOLD_SECONDS = strat_cfg.min_hold_seconds
 
 def load_candle_table(table):
     with psycopg2.connect(**DB_CFG) as conn:

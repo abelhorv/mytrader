@@ -1,0 +1,3 @@
+[console_scripts]
+forex-bot = app.main:app
+

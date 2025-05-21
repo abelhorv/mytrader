@@ -5,7 +5,7 @@ from collector.saxo import SaxoCollector
 from storage.store import get_store
 from aggregator.candle_builder import MultiIntervalCandleBuilder
 from strategy.strategies import ParametrizedStrategy
-from backtest.replay import run_backtest
+#from backtest.replay import run_backtest
 from backtest.trading_logic_test import backtest as run_legacy
 
 app = typer.Typer()
@@ -32,6 +32,8 @@ def collect():
 
 @app.command()
 def backtest():
+    """Run the original trading_logic_test backtester against Postgres candles."""
+    from backtest.trading_logic_test import backtest as run_legacy
     run_legacy()
 
 if __name__ == "__main__":

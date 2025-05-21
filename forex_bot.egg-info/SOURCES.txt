@@ -1,0 +1,9 @@
+LICENSE
+README.txt
+setup.py
+forex_bot.egg-info/PKG-INFO
+forex_bot.egg-info/SOURCES.txt
+forex_bot.egg-info/dependency_links.txt
+forex_bot.egg-info/entry_points.txt
+forex_bot.egg-info/requires.txt
+forex_bot.egg-info/top_level.txt
