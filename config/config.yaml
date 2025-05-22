@@ -51,7 +51,7 @@ strategy:
 
 backtest:
   start: "2025-05-20T07:00:00"
-  end:   "2025-05-20T16:15:59"
+  end:   "2025-05-20T08:45:59"
 
 executor:
   slippage: 0.0001
