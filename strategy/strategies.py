@@ -4,7 +4,8 @@ from datetime import timedelta
 from .indicators import evaluate_indicators
 
 class BaseStrategy:
-    def generate_signal(self, history, tick): ...
+    def generate_signal(self, history, tick):
+        ...
 
 class ParametrizedStrategy(BaseStrategy):
     def __init__(self, cfg):
@@ -12,69 +13,52 @@ class ParametrizedStrategy(BaseStrategy):
         self.last_trade_time = None
         self.last_price = None
 
-    def generate_signal(self,
-                        history_1m,
-                        tick,
-                        candles_5m=None,
-                        candles_15m=None):
-        prices = [c['close'] for c in history_1m]
-        now = tick['timestamp']  
-        # Cooldown
+    def generate_signal(self, history_1m, tick, candles_5m=None, candles_15m=None):
+        now = tick['timestamp']
+        price = tick['price']
+
+        # Cooldown: skip if within cooldown period
         if self.last_trade_time and (now - self.last_trade_time).seconds < self.cfg.cooldown_seconds:
             return "Hold"
 
-        vals = evaluate_indicators(
-            prices,
+        # Evaluate pattern & candle scores
+        # evaluate_indicators returns: rsi, slope, macd, macd_signal, boll, pattern, c1, c5, c15
+        scores = evaluate_indicators(
+            [c['close'] for c in history_1m],
             candles_1m=history_1m,
             candles_5m=candles_5m,
             candles_15m=candles_15m,
-            cfg=self.cfg,
+            cfg=self.cfg
         )
+        # Extract only candle scores
+        c1, c5, c15 = scores[6], scores[7], scores[8]
 
-
-        rsi, slope, macd, macd_signal, boll, pattern, c1, c5, c15 = vals
-        price = prices[-1]
-        sma = np.mean(prices[-self.cfg.sma_period:])
-
-        # Scores
-        th = self.cfg.thresholds
-        weights = self.cfg.weights
-        rsi_score   =  1 if rsi < th.rsi_buy   else -1 if rsi > th.rsi_sell   else 0
-        trend_score =  1 if slope > th.slope_buy else -1 if slope < th.slope_sell else 0
-        sma_score   =  1 if price > sma else -1 if price < sma else 0
-        macd_diff   =  macd - macd_signal
-        macd_score  =  1 if macd_diff > self.cfg.macd_tolerance else -1 if macd_diff < -self.cfg.macd_tolerance else 0
-
+        # Aggregate into a total candle score
+        w = self.cfg.weights
         total_score = (
-            rsi_score   * weights.rsi +
-            trend_score * weights.trend +
-            sma_score   * weights.sma +
-            macd_score  * weights.macd +
-            boll        * weights.bollinger +
-            pattern     * weights.pattern +
-            c1          * weights.candle_1m +
-            c5          * weights.candle_5m +
-            c15         * weights.candle_15m
+              c1  * w.candle_1m
+            + c5  * w.candle_5m
+            + c15 * w.candle_15m
         )
 
-        # Minimum gap
+        # Enforce minimum price movement gap
         if self.last_price and abs(price - self.last_price) < self.cfg.min_trade_gap:
             return "Hold"
 
-#        print(f"{now} scores: rsi={rsi:.1f}, slope={slope:.7f}, macd_diff={(macd-macd_signal):.6f}, boll={boll}, "
-#              f"pattern={pattern:.1f}, c1={c1:.2f}, c5={c5:.2f}, c15={c15:.2f}, total_score={total_score:.2f}")
-        # Decision
-        if total_score > 0.5 + self.cfg.hysteresis_margin:
+        # Decision thresholds with hysteresis
+        upper = 0.5 + self.cfg.hysteresis_margin
+        lower = -0.5 - self.cfg.hysteresis_margin
+        if total_score > upper:
             action = "Buy"
-        elif total_score < -0.5 - self.cfg.hysteresis_margin:
+        elif total_score < lower:
             action = "Sell"
         else:
             action = "Hold"
-#        print(f"{now} total_score={total_score:.2f} → action={action}")
+
+        # Update last trade if executed
         if action in ("Buy", "Sell"):
             self.last_trade_time = now
             self.last_price = price
+
         return action
-
-
 

@@ -126,15 +126,28 @@ def main():
         S15, E15, F15 = scores['S15'], scores['E15'], scores['F15']
 
         # Debug print current 1m candle plus scores
+
+        SINGLE_LABELS = {0.5:  "Doji", 0.7:  "Marubozu", 0.4:  "Hammer / Hanging Man", -0.4:  "Inverted Hammer / Shooting Star", -0.5:  "Doji", -0.7:  "Marubozu"}
+        MULTI_LABELS = { 0.6: "Bullish Engulfing", -0.6: "Bearish Engulfing", 0.4: "Bullish Harami / Tweezer Bottom", -0.4: "Bearish Harami / Tweezer Top", 0.5: "Piercing Line", -0.5: "Dark Cloud Cover"}
+
+        single = SINGLE_LABELS.get(S5, None)
+        multi  = MULTI_LABELS.get(E5, None)
         live_1m = result['candle_states']['1m']
         print(
             f"{timestamp} | Mid={mid_price:.5f} Vol={tick_volume} | "
             f"1m OHLCHV={live_1m['o']:.5f}/{live_1m['h']:.5f}/"
             f"{live_1m['l']:.5f}/{live_1m['c']:.5f}/{live_1m['v']} | "
-            f"S1={S1:.2f},E1={E1:.2f},F1={F1:.2f} | "
-            f"S5={S5:.2f},E5={E5:.2f},F5={F5:.2f} | "
-            f"S15={S15:.2f},E15={E15:.2f},F15={F15:.2f}"
+            f"S5={S5:.2f} shape={single},E5={E5:.2f} shape={multi},F5={F5:.2f} | "
         )
+
+#        print(
+#            f"{timestamp} | Mid={mid_price:.5f} Vol={tick_volume} | "
+#            f"1m OHLCHV={live_1m['o']:.5f}/{live_1m['h']:.5f}/"
+#            f"{live_1m['l']:.5f}/{live_1m['c']:.5f}/{live_1m['v']} | "
+#            f"S1={S1:.2f},E1={E1:.2f},F1={F1:.2f} | "
+#            f"S5={S5:.2f},E5={E5:.2f},F5={F5:.2f} | "
+#            f"S15={S15:.2f},E15={E15:.2f},F15={F15:.2f}"
+#        )
 
     conn.close()
 
