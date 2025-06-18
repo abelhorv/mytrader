@@ -35,6 +35,8 @@ project-root/
 │   └── store.py
 ├── aggregator/
 │   └── candle_builder.py
+├── analytics/
+│   └── candles.py		# examine candle patterns
 ├── strategy/
 │   ├── indicators.py
 │   └── strategies.py

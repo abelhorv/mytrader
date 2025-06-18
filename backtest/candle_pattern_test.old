@@ -1,0 +1,92 @@
+#!/usr/bin/env python3
+# backtest/candle_pattern_report.py
+
+import psycopg2
+import yaml
+from datetime import datetime
+from strategy.indicators import (
+    detect_candle_pattern,
+    detect_multi_candle_pattern,
+    detect_five_candle_pattern
+)
+
+SINGLE_LABELS = {
+    0.5:  "Doji",
+    0.7:  "Marubozu",
+    0.4:  "Hammer / Hanging Man",
+   -0.4:  "Inverted Hammer / Shooting Star",
+   -0.5:  "Doji",
+   -0.7:  "Marubozu"
+}
+MULTI_LABELS = {
+     0.6: "Bullish Engulfing",
+    -0.6: "Bearish Engulfing",
+     0.4: "Bullish Harami / Tweezer Bottom",
+    -0.4: "Bearish Harami / Tweezer Top",
+     0.5: "Piercing Line",
+    -0.5: "Dark Cloud Cover"
+}
+
+
+def load_yaml_config(path):
+    with open(path) as f:
+        return yaml.safe_load(f)
+
+
+def fetch_candles(conn, table, start_time, end_time):
+    qry = f"""
+        SELECT timestamp, open, high, low, close, volume
+          FROM {table}
+         WHERE timestamp BETWEEN %s AND %s
+      ORDER BY timestamp ASC
+    """
+    with conn.cursor() as cur:
+        cur.execute(qry, (start_time, end_time))
+        cols = [c.name for c in cur.description]
+        rows = cur.fetchall()
+    return [dict(zip(cols, row)) for row in rows]
+
+
+def main():
+    # 1) Load config window & DB
+    conf = load_yaml_config('config/config.yaml')['backtest']
+    start_time = datetime.fromisoformat(conf['start'])
+    end_time   = datetime.fromisoformat(conf['end'])
+    db_info = load_yaml_config('config/db.secret.yaml')
+
+    # 2) Fetch 5m candles series
+    conn = psycopg2.connect(**db_info)
+    series_5m = fetch_candles(conn, 'candles_m5', start_time, end_time)
+    if not series_5m:
+        print("[ERROR] No 5m candles in window")
+        conn.close()
+        return
+
+    # 3) Iterate
+    print("timestamp, S5, S5_label, E5, E5_label, F5")
+    for i in range(1, len(series_5m)):
+        curr = series_5m[i]
+        prev = series_5m[i-1]
+        # S5: single on current
+        S5 = detect_candle_pattern(curr)
+        single_lbl = SINGLE_LABELS.get(S5, '')
+        # E5: multi on prev->curr
+        E5 = detect_multi_candle_pattern(prev, curr)
+        multi_lbl = MULTI_LABELS.get(E5, '')
+        # F5: five-candle on rolling window ending at curr
+        window = series_5m[max(0, i-4):i+1]
+        F5 = detect_five_candle_pattern(window) if len(window)==5 else 0
+        # Print
+        ts = curr['timestamp'].isoformat()
+        print(
+        f"{ts}, O={curr['open']:.6f}, H={curr['high']:.6f}, L={curr['low']:.6f}, C={curr['close']:.6f}, V={curr['volume']}, "
+        f"S5={S5:+.2f} ({single_lbl}), "
+        f"E5={E5:+.2f} ({multi_lbl}), "
+        f"F5={F5:+.2f}"
+        )
+
+    conn.close()
+
+if __name__ == '__main__':
+    main()
+

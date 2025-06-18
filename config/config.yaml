@@ -3,6 +3,9 @@ collector:
   symbols:
     - "EURUSD"
 
+uic: 14
+timezone:       Europe/Zurich
+
 storage:
   database: "data/forex.db"
 
@@ -39,8 +42,8 @@ strategy:
     bollinger:    0.1
     pattern:      0.1
     candle_1m:    0.1
-    candle_5m:    0.1
-    candle_15m:   0.2
+    candle_5m:    0 #0.1
+    candle_15m:   0 #0.2
 
   # Buy/sell thresholds
   thresholds:
@@ -50,8 +53,8 @@ strategy:
     slope_sell: -0.0000015
 
 backtest:
-  start: "2025-05-20T07:00:00"
-  end:   "2025-05-20T08:45:59"
+  start: "2025-06-16T04:00:00"
+  end:   "2025-06-16T20:15:59"
 
 executor:
   slippage: 0.0001
