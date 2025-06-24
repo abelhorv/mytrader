@@ -5,6 +5,7 @@ import yaml
 import requests
 from datetime import datetime, timezone, timedelta
 import psycopg2
+from zoneinfo import ZoneInfo
 from analytics.candles import (
     detect_candle_pattern,
     detect_multi_candle_pattern,
@@ -162,7 +163,8 @@ def main():
         window = series_5m[max(0, i-4):i+1]
         F5 = detect_five_candle_pattern(window) if len(window)==5 else 0
         # Print
-        ts = curr['timestamp'].isoformat()
+        ts = curr['timestamp'].astimezone(ZoneInfo("Europe/Zurich")).isoformat()
+#        ts = curr['timestamp'].isoformat()
         print(
         f"{ts}, O={curr['open']:.6f}, H={curr['high']:.6f}, L={curr['low']:.6f}, C={curr['close']:.6f}, V={curr['volume']}, "
         f"S5={S5:+.2f} ({single_lbl}), "
