@@ -1,0 +1,112 @@
+import os
+import subprocess
+import json
+from flask import Flask, render_template_string
+
+# 1. Run the backtest script and capture its output
+output = subprocess.check_output(['python3', 'backtest/candle_pattern_test.py']).decode()
+
+# 2. Parse the output
+lines = output.strip().splitlines()
+data = []
+for line in lines[1:]:  # Skip header
+    parts = line.split(', ')
+    if len(parts) < 9:
+        continue
+    try:
+        ts = parts[0]
+        o = float(parts[1].split('=')[1])
+        h = float(parts[2].split('=')[1])
+        l = float(parts[3].split('=')[1])
+        c = float(parts[4].split('=')[1])
+
+        s5_part = parts[5].split('=')[1]
+        s5_val = s5_part.split(' ')[0]
+        s5 = float(s5_val) if s5_val.replace('+','').replace('-','').replace('.','').isdigit() else 0.0
+        s5_lbl = s5_part.split('(')[1].rstrip(')') if '(' in s5_part else ''
+
+        e5_part = parts[6].split('=')[1]
+        e5_val = e5_part.split(' ')[0]
+        e5 = float(e5_val) if e5_val.replace('+','').replace('-','').replace('.','').isdigit() else 0.0
+        e5_lbl = e5_part.split('(')[1].rstrip(')') if '(' in e5_part else ''
+
+        f5_str = parts[7].split('=')[1]
+        f5 = float(f5_str) if f5_str.replace('+','').replace('-','').replace('.','').isdigit() else 0.0
+
+        data.append({
+            "timestamp": ts[-8:-3],
+            "O": o, "H": h, "L": l, "C": c,
+            "S5": s5, "S5_label": s5_lbl,
+            "E5": e5, "E5_label": e5_lbl,
+            "F5": f5,
+            "bodySize": abs(c - o)
+        })
+    except Exception as e:
+        print(f"[WARN] Failed to parse line: {line}\nReason: {e}")
+
+# 3. Serve with Flask
+app = Flask(__name__)
+
+HTML_TEMPLATE = '''
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Candle Pattern Visualizer</title>
+  <script src="https://unpkg.com/prop-types/prop-types.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react@17/umd/react.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@17/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/recharts@2.7.2/umd/Recharts.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/javascript">
+    const waitForRecharts = () => {
+      if (!window.Recharts) return setTimeout(waitForRecharts, 100);
+
+      const data = {{ data | safe }};
+      const { ComposedChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Bar, LabelList, Line, CartesianGrid } = window.Recharts;
+
+      function CandleChart() {
+        return (
+          React.createElement('div', {style: {padding: '20px'}},
+            React.createElement('h2', null, 'Candle Pattern Visualizer'),
+            React.createElement(ResponsiveContainer, {width: '100%', height: 600},
+              React.createElement(ComposedChart, {
+                data: data,
+                margin: {top: 20, right: 20, bottom: 40, left: 0}
+              },
+                React.createElement(CartesianGrid, {stroke: '#ccc', strokeDasharray: '5 5'}),
+                React.createElement(XAxis, {dataKey: 'timestamp', angle: -45, textAnchor: 'end', height: 60}),
+                React.createElement(YAxis, {domain: ['auto', 'auto']}),
+                React.createElement(Tooltip, null),
+                React.createElement(Bar, {dataKey: 'bodySize', fill: '#8884d8', isAnimationActive: false},
+  React.createElement(LabelList, {dataKey: 'S5_label', position: 'top', fill: 'blue', fontSize: 10}),
+  React.createElement(LabelList, {dataKey: 'E5_label', position: 'bottom', fill: 'orange', fontSize: 10})
+)
+              )
+            )
+          )
+        );
+      }
+
+      ReactDOM.render(
+  React.createElement(CandleChart),
+  document.getElementById('root')
+);
+    };
+
+    waitForRecharts();
+  </script>
+</body>
+</html>
+'''
+
+@app.route('/')
+def index():
+    return render_template_string(HTML_TEMPLATE, data=json.dumps(data))
+
+if __name__ == '__main__':
+    app.run(debug=True, port=8080, host='0.0.0.0')
+
